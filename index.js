@@ -50,6 +50,5 @@ function retriveTimeleft(tramDirection) {
 }
 
 wsServer.on("connection", function (ws, req) {
-  statsdClient.increment('wemos_connections');
-  console.log("new client");
+  console.log("New wemos client detected");
 });
