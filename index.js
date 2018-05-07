@@ -4,11 +4,8 @@ const server = require("http").Server(app);
 const WebSocket = require("ws")
 const bodyParser = require("body-parser");
 const path = require("path");
-const statsd = require('node-statsd');
-const statsdMiddleware = require('express-statsd');
 var Request = require("request");
 
-const statsdClient = new statsd();
 server.listen(process.env.PORT || 8080);
 
 const wsServer = new WebSocket.Server({ server });
@@ -40,7 +37,7 @@ function retriveTimeleft(tramDirection) {
     if (time_left > 300) {
       time_left = 300;
     }
-    console.log("temps affiché: " + next_1.temps + " et il est: " + new Date());
+    console.log("Temps affiché: " + next_1.temps + "---  Et il est: " + new Date());
     //console.log("Prochain tram dans " + time_left + " secondes");
     const percent = time_left / 300;
     console.log("Percent: " + percent )
