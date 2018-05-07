@@ -2,7 +2,7 @@
 
 A Node.js backend for the Tram Watcher, by Clever Cloud.
 
-Uses websocket with node to send remaining time to a wemos D1 mini connected to a multicolor LED strip.
+Uses websocket with node to send remaining time to a wemos D1 mini connected to a multicolor LED<> strip.
 
 
 ## TAN API
