@@ -23,7 +23,7 @@ function parseTime(time) {
   return parseInt(time.split('mn')[0]) * 60 + (time.slice(-2) === "mn" ? 0 : parseInt(time.split('mn')[1]))
 }
 retriveTimeleft(1);
-setInterval(retriveTimeleft, 3000, 1)
+setInterval(retriveTimeleft, 20000, 1)
 
 
 function retriveTimeleft(tramDirection) {
