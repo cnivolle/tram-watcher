@@ -11,5 +11,5 @@ We're fetching `http://open.tan.fr/ewp/tempsattente.json/GSNO` every 20 seconds.
 
 # Authors
 
-* @cnivolle 
-* @caille_f
+* [@cnivolle](https://github.com/cnivolle)
+* [@caillef](https://github.com/caillef)
