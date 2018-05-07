@@ -6,42 +6,53 @@ const bodyParser = require("body-parser");
 const path = require("path");
 const statsd = require('node-statsd');
 const statsdMiddleware = require('express-statsd');
+var Request = require("request");
 
 const statsdClient = new statsd();
 server.listen(process.env.PORT || 8080);
-
-app.use(statsdMiddleware());
-app.use(express.static(__dirname + '/public'));
 
 const wsServer = new WebSocket.Server({ server });
 
 app.use(bodyParser.text());
 
 
+function parseTime(time) {
+  if (time.indexOf('mn') === -1) {
+    return 0;
+  }
+  return parseInt(time.split('mn')[0]) * 60 + (time.slice(-2) === "mn" ? 0 : parseInt(time.split('mn')[1]))
+}
+retriveTimeleft(1);
+setInterval(retriveTimeleft, 3000, 1)
 
-app.get("/", function(req, res) {
-  res.sendFile(path.join(__dirname + '/public/index.html'));
-});
 
-app.put("/color", function(req, res) {
-  wsServer.clients.forEach(function(client) {
-    if(client.readyState === WebSocket.OPEN) {
-      client.send(req.body);
+function retriveTimeleft(tramDirection) {
+  Request.get("http://open.tan.fr/ewp/tempsattente.json/GSNO", (error, response, body) => {
+    if (error) {
+      return console.dir(error);
     }
-  });
-  res.send("Ok.");
-});
+    const data = JSON.parse(body);
 
-app.get("/status", function (req, res) {
-  const client_number = [...wsServer.clients].length;
-  res.send({client_number});
-});
+    var next_1 = data.find(t => t.sens === tramDirection);
+
+    // Checking if we can leave
+    var time_left = parseTime(next_1.temps);
+    if (time_left > 300) {
+      time_left = 300;
+    }
+    console.log("temps affiché: " + next_1.temps + " et il est: " + new Date());
+    //console.log("Prochain tram dans " + time_left + " secondes");
+    const percent = time_left / 300;
+    console.log("Percent: " + percent )
+    wsServer.clients.forEach(function (client) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(percent);
+      }
+    });
+  });
+}
 
 wsServer.on("connection", function (ws, req) {
   statsdClient.increment('wemos_connections');
   console.log("new client");
 });
-
-setInterval(() => {
-  statsdClient.gauge('wemos_clients', [...wsServer.clients].length);
-}, 10000);
