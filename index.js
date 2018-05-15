@@ -8,47 +8,74 @@ var Request = require("request");
 
 server.listen(process.env.PORT || 8080);
 
-const wsServer = new WebSocket.Server({ server });
+const wsServer = new WebSocket.Server({
+  server
+});
 
 app.use(bodyParser.text());
 
-
-function parseTime(time) {
+function getTimeFromResponse(time) {
   if (time.indexOf('mn') === -1) {
     return 0;
   }
-  return parseInt(time.split('mn')[0]) * 60 + (time.slice(-2) === "mn" ? 0 : parseInt(time.split('mn')[1]))
+  var seconds = parseInt(time.split('mn')[0]) * 60;
+  if (time.slice(-2) !== "mn") {
+    seconds += parseInt(time.split('mn')[1])
+  }
+  return seconds
 }
-retriveTimeleft(1);
-setInterval(retriveTimeleft, 20000, 1)
 
+retriveTimeleft();
+setInterval(retriveTimeleft, 1000)
 
-function retriveTimeleft(tramDirection) {
-  Request.get("http://open.tan.fr/ewp/tempsattente.json/GSNO", (error, response, body) => {
-    if (error) {
-      return console.dir(error);
-    }
-    const data = JSON.parse(body);
-
-    var next_1 = data.find(t => t.sens === tramDirection);
-
-    // Checking if we can leave
-    var time_left = parseTime(next_1.temps);
-    if (time_left > 300) {
-      time_left = 300;
-    }
-    console.log("Temps affiché: " + next_1.temps + "---  Et il est: " + new Date());
-    //console.log("Prochain tram dans " + time_left + " secondes");
-    const percent = time_left / 300;
-    console.log("Percent: " + percent )
-    wsServer.clients.forEach(function (client) {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(percent);
+function getSecondsPoolTrams(station, direction, poolSize) {
+  return new Promise((resolve, reject) => {
+    Request.get(`http://open.tan.fr/ewp/tempsattente.json/${station}`, (error, response, body) => {
+      if (error) {
+        reject(`error: ${error}`)
       }
+      const data = JSON.parse(body);
+      const pool = []
+      for (var i = 0; i < poolSize && i < data.length; i++) {
+        const tram = data.filter(t => t.sens === direction)[i];
+        const seconds = getTimeFromResponse(tram.temps);  
+        pool.push(seconds)
+      }
+      resolve(pool)
     });
-  });
+  })
 }
 
-wsServer.on("connection", function (ws, req) {
+function getSecondsTramsToCommerce(station, poolSize) {
+  return getSecondsPoolTrams(station, 1, poolSize)  
+}
+
+function getSecondsTramsToBeaujoire(station, poolSize) {
+  return getSecondsPoolTrams(station, 2, poolSize)  
+}
+
+function retriveTimeleft() {
+  getSecondsTramsToCommerce("GSNO", 3)
+    .then(seconds1 => {
+      getSecondsTramsToBeaujoire("GSNO", 3)
+      .then(seconds2 => {
+        const response = `${JSON.stringify(seconds1)} ${JSON.stringify(seconds2)}`
+        console.log(response)
+        wsServer.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(response);
+          }
+        });
+      })
+      .catch(err => console.log(err))
+    })
+    .catch(err => console.log(err))
+}
+
+wsServer.on("connection", (ws, req) => {
   console.log("New wemos client detected");
+});
+
+wsServer.on('close', () => {
+  console.log('disconnected');
 });
